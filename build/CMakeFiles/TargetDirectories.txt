@@ -1,3 +1,0 @@
-C:/Users/xenom/Documents/Algo/CODES/GIT/myDiscord/build/CMakeFiles/myDiscord.dir
-C:/Users/xenom/Documents/Algo/CODES/GIT/myDiscord/build/CMakeFiles/edit_cache.dir
-C:/Users/xenom/Documents/Algo/CODES/GIT/myDiscord/build/CMakeFiles/rebuild_cache.dir
