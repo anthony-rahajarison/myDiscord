@@ -1,22 +1,20 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.10)
 project(myDiscord C)
 
-# Set the C standard
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# Find GTK4 using pkg-config
-set(PKG_CONFIG_EXECUTABLE "C:/msys64/mingw64/bin/pkg-config.exe")
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTK4 REQUIRED gtk4)
+pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 
-# Add GTK4 include directories
-include_directories(${GTK4_INCLUDE_DIRS})
-link_directories(${GTK4_LIBRARY_DIRS})
+include_directories(
+    ${GTK3_INCLUDE_DIRS}
+    ${PROJECT_SOURCE_DIR}/include
+    )
 
-# Add your source files
-file(GLOB SOURCES "src/*.c")
-add_executable(myDiscord ${SOURCES})
+link_directories(${GTK3_LIBRARY_DIRS})
+add_definitions(${GTK3_CFLAGS_OTHER})
 
-# Link with GTK4
-target_link_libraries(myDiscord ${GTK4_LIBRARIES})
+file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/src/*.c")
+
+add_executable(myDiscord src/main.c)
+target_link_libraries(myDiscord ${GTK3_LIBRARIES})
