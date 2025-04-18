@@ -16,5 +16,5 @@ add_definitions(${GTK3_CFLAGS_OTHER})
 
 file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/src/*.c")
 
-add_executable(myDiscord src/main.c)
+add_executable(myDiscord ${SOURCES})
 target_link_libraries(myDiscord ${GTK3_LIBRARIES})
