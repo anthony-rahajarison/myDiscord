@@ -28,10 +28,8 @@ static void send_message(GtkWidget *widget, gpointer data) {
         gtk_text_buffer_insert(widgets->buffer, &iter, text, -1);
         gtk_text_buffer_insert(widgets->buffer, &iter, "\n", -1);
         
-        // Effacer le champ de saisie
         gtk_entry_set_text(GTK_ENTRY(widgets->entry), "");
         
-        // Faire défiler vers le bas
         GtkAdjustment *adj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(
             gtk_widget_get_parent(widgets->view)));
         gtk_adjustment_set_value(adj, gtk_adjustment_get_upper(adj));
@@ -45,9 +43,8 @@ void apply_css(GtkWidget *widget, const char *css) {
   GtkStyleContext *context = gtk_widget_get_style_context(widget);
   gtk_style_context_add_provider(context, 
                                GTK_STYLE_PROVIDER(provider), 
-                               GTK_STYLE_PROVIDER_PRIORITY_APPLICATION); // Priorité plus élevée
+                               GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
   
-  // Applique aussi au conteneur parent
   gtk_style_context_add_provider_for_screen(gdk_screen_get_default(),
                                           GTK_STYLE_PROVIDER(provider),
                                           GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
@@ -73,7 +70,6 @@ static void activate(GtkApplication* app, gpointer user_data) {
     gtk_grid_set_column_spacing(GTK_GRID(grid), 5);
     gtk_container_add(GTK_CONTAINER(window), grid);
     
-    // Création de la zone de chat scrollable
     scrolled_window = gtk_scrolled_window_new(NULL, NULL);
     gtk_widget_set_hexpand(scrolled_window, TRUE);
     gtk_widget_set_vexpand(scrolled_window, TRUE);
@@ -89,24 +85,21 @@ static void activate(GtkApplication* app, gpointer user_data) {
     widgets->buffer = text_buffer;
     widgets->view = text_view;
     
-    // Ajout de quelques messages initiaux
     GtkTextIter iter;
     gtk_text_buffer_get_end_iter(text_buffer, &iter);
     gtk_text_buffer_insert(text_buffer, &iter, "Chat Public\n", -1);
     gtk_text_buffer_insert(text_buffer, &iter, "[Admin] 12:00:00: Tapez votre message ci-dessous et cliquez sur Envoyer.\n", -1);
     
-    // Champ de saisie
     entry = gtk_entry_new();
     gtk_widget_set_hexpand(entry, TRUE);
     gtk_grid_attach(GTK_GRID(grid), entry, 0, 1, 1, 1);
     widgets->entry = entry;
     
-    // Bouton Envoyer
     button = gtk_button_new_with_label("Envoyer");
     g_signal_connect(button, "clicked", G_CALLBACK(send_message), widgets);
     gtk_grid_attach(GTK_GRID(grid), button, 1, 1, 1, 1);
     
-    // Appliquer le style CSS
+    // CSS
     const char *window_css = 
     "window {"
         "background-color: #36393f;"
