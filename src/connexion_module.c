@@ -7,7 +7,7 @@
 
 #define DB_CONN "host=localhost dbname=mydiscord user=postgres password=yourpassword"
 
-// Connect to the database
+
 static PGconn* connect_db() {
     PGconn* conn = PQconnectdb(DB_CONN);
     if (PQstatus(conn) != CONNECTION_OK) {
@@ -18,7 +18,7 @@ static PGconn* connect_db() {
     return conn;
 }
 
-// Hash password using SHA-256
+
 void hash_password(const char* password, char* hashed_output) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
     SHA256((const unsigned char*)password, strlen(password), hash);
@@ -29,7 +29,7 @@ void hash_password(const char* password, char* hashed_output) {
     hashed_output[64] = '\0';
 }
 
-// Validate password rules
+
 int validate_password(const char *pwd) {
     int length = strlen(pwd);
     int has_upper = 0, has_digit = 0, has_special = 0;

@@ -3,6 +3,7 @@
 
 void createUserTable(PGconn *conn);
 void exitOnError(PGconn *conn);
+void handle_command(int client_socket, const char *message);
 
 int main() {
     const char *conninfo = "host=localhost dbname=myDiscord user=postgres password=Benjmax13011.";
@@ -17,5 +18,12 @@ int main() {
     createUserTable(conn);
 
     PQfinish(conn);
+    return 0;
+
+    handle_command(1, "/create général");
+    handle_command(2, "/ban bob");
+    handle_command(3, "/join musique");
+    handle_command(4, "/fly");  
+
     return 0;
 }
