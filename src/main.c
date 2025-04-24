@@ -22,7 +22,7 @@ static void send_message(GtkWidget *widget, gpointer data) {
         GtkTextIter iter;
         gtk_text_buffer_get_end_iter(widgets->buffer, &iter);
         
-        gtk_text_buffer_insert(widgets->buffer, &iter, "[User] ", -1);
+        gtk_text_buffer_insert(widgets->buffer, &iter, "[User] ", -1); //Username
         gtk_text_buffer_insert(widgets->buffer, &iter, time_str, -1);
         gtk_text_buffer_insert(widgets->buffer, &iter, ": ", -1);
         gtk_text_buffer_insert(widgets->buffer, &iter, text, -1);
@@ -62,7 +62,7 @@ static void activate(GtkApplication* app, gpointer user_data) {
     
     window = gtk_application_window_new(app);
     gtk_window_set_title(GTK_WINDOW(window), "Chat Application");
-    gtk_window_set_default_size(GTK_WINDOW(window), 800, 600);
+    gtk_window_set_default_size(GTK_WINDOW(window), 1000, 800);
     gtk_container_set_border_width(GTK_CONTAINER(window), 10);
     
     grid = gtk_grid_new();
@@ -88,7 +88,6 @@ static void activate(GtkApplication* app, gpointer user_data) {
     GtkTextIter iter;
     gtk_text_buffer_get_end_iter(text_buffer, &iter);
     gtk_text_buffer_insert(text_buffer, &iter, "Chat Public\n", -1);
-    gtk_text_buffer_insert(text_buffer, &iter, "[Admin] 12:00:00: Tapez votre message ci-dessous et cliquez sur Envoyer.\n", -1);
     
     entry = gtk_entry_new();
     gtk_widget_set_hexpand(entry, TRUE);
@@ -107,11 +106,18 @@ static void activate(GtkApplication* app, gpointer user_data) {
     "grid {"
         "background-color: #36393f;"
     "}"
-    "textview, textview text {"
+    "textview{"
         "background-color: #2f3136;"
         "color: #dcddde;"
         "font-family: Arial;"
         "font-size: 20px;"
+        "border-radius: 10px;"
+        "padding: 10px;"
+    "}"
+    "textview text {"
+        "background-color: #2f3136;"
+        "color: #dcddde;"
+        "font-family: Arial;"
         "border-radius: 10px;"
         "padding: 10px;"
     "}"
