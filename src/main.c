@@ -54,6 +54,7 @@ static void activate(GtkApplication* app, gpointer user_data) {
     GtkWidget *window;
     GtkWidget *grid;
     GtkWidget *scrolled_window;
+    GtkWidget *channel_list;
     GtkWidget *text_view;
     GtkTextBuffer *text_buffer;
     GtkWidget *entry;
@@ -69,11 +70,25 @@ static void activate(GtkApplication* app, gpointer user_data) {
     gtk_grid_set_row_spacing(GTK_GRID(grid), 5);
     gtk_grid_set_column_spacing(GTK_GRID(grid), 5);
     gtk_container_add(GTK_CONTAINER(window), grid);
+
+    //Left Sidebar
+    channel_list = gtk_list_box_new();
+    gtk_widget_set_vexpand(channel_list, TRUE);
+    gtk_widget_set_hexpand(channel_list, FALSE);
+    gtk_widget_set_size_request(channel_list, 200, -1);
+    gtk_list_box_set_selection_mode(GTK_LIST_BOX(channel_list), GTK_SELECTION_SINGLE);
+    gtk_grid_attach(GTK_GRID(grid), channel_list, 0, 0, 1, 2);
+
+    GtkWidget *chan1 = gtk_label_new("Général");
+    gtk_list_box_insert(GTK_LIST_BOX(channel_list), chan1, -1);
+
     
+    
+    //Right Chat Section
     scrolled_window = gtk_scrolled_window_new(NULL, NULL);
     gtk_widget_set_hexpand(scrolled_window, TRUE);
     gtk_widget_set_vexpand(scrolled_window, TRUE);
-    gtk_grid_attach(GTK_GRID(grid), scrolled_window, 0, 0, 2, 1);
+    gtk_grid_attach(GTK_GRID(grid), scrolled_window, 1, 0, 2, 1);
     
     text_view = gtk_text_view_new();
     gtk_text_view_set_editable(GTK_TEXT_VIEW(text_view), FALSE);
@@ -91,12 +106,12 @@ static void activate(GtkApplication* app, gpointer user_data) {
     
     entry = gtk_entry_new();
     gtk_widget_set_hexpand(entry, TRUE);
-    gtk_grid_attach(GTK_GRID(grid), entry, 0, 1, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), entry, 1, 1, 1, 1);
     widgets->entry = entry;
     
     button = gtk_button_new_with_label("Envoyer");
     g_signal_connect(button, "clicked", G_CALLBACK(send_message), widgets);
-    gtk_grid_attach(GTK_GRID(grid), button, 1, 1, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), button, 2, 1, 1, 1);
     
     // CSS
     const char *window_css = 
@@ -142,6 +157,16 @@ static void activate(GtkApplication* app, gpointer user_data) {
         "background-color: #5056a0;"
         "color: #dcddde;"
         "border-radius: 5px;"
+    "}"
+    "list {"
+        "background-color: #2c2f33;"
+        "color: #ffffff;"
+        "font-family: Arial;"
+        "font-size: 16px;"
+        "padding: 10px;"
+    "}"
+    "list row:selected {"
+        "background-color: #5056a0;"
     "}";
     
     apply_css(window, window_css);
