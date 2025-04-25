@@ -36,19 +36,25 @@ static void send_message(GtkWidget *widget, gpointer data) {
     }
 }
 
-void apply_css(GtkWidget *widget, const char *css) {
-  GtkCssProvider *provider = gtk_css_provider_new();
-  gtk_css_provider_load_from_data(provider, css, -1, NULL);
-  
-  GtkStyleContext *context = gtk_widget_get_style_context(widget);
-  gtk_style_context_add_provider(context, 
-                               GTK_STYLE_PROVIDER(provider), 
-                               GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-  
-  gtk_style_context_add_provider_for_screen(gdk_screen_get_default(),
-                                          GTK_STYLE_PROVIDER(provider),
-                                          GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+void apply_css_from_file(const char *filepath) {
+    GtkCssProvider *provider = gtk_css_provider_new();
+    GError *error = NULL;
+
+    gtk_css_provider_load_from_path(provider, filepath, &error);
+
+    if (error) {
+        g_printerr("Erreur lors du chargement du CSS : %s\n", error->message);
+        g_clear_error(&error);
+        return;
+    }
+
+    gtk_style_context_add_provider_for_screen(
+        gdk_screen_get_default(),
+        GTK_STYLE_PROVIDER(provider),
+        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+    );
 }
+
 
 static void activate(GtkApplication* app, gpointer user_data) {
     GtkWidget *window;
@@ -58,7 +64,7 @@ static void activate(GtkApplication* app, gpointer user_data) {
     GtkWidget *text_view;
     GtkTextBuffer *text_buffer;
     GtkWidget *entry;
-    GtkWidget *button;
+    GtkWidget *send_button;
     ChatWidgets *widgets = g_new(ChatWidgets, 1);
     
     window = gtk_application_window_new(app);
@@ -79,10 +85,11 @@ static void activate(GtkApplication* app, gpointer user_data) {
     gtk_list_box_set_selection_mode(GTK_LIST_BOX(channel_list), GTK_SELECTION_SINGLE);
     gtk_grid_attach(GTK_GRID(grid), channel_list, 0, 0, 1, 2);
 
-    GtkWidget *chan1 = gtk_label_new("Général");
+    GtkWidget *chan1 = gtk_button_new_with_label("chan1");
     gtk_list_box_insert(GTK_LIST_BOX(channel_list), chan1, -1);
+    g_signal_connect(chan1, "clicked", G_CALLBACK(send_message), widgets);
+    // gtk_style_context_add_class(cancel_ctx, "cancel-btn");
 
-    
     
     //Right Chat Section
     scrolled_window = gtk_scrolled_window_new(NULL, NULL);
@@ -109,67 +116,13 @@ static void activate(GtkApplication* app, gpointer user_data) {
     gtk_grid_attach(GTK_GRID(grid), entry, 1, 1, 1, 1);
     widgets->entry = entry;
     
-    button = gtk_button_new_with_label("Envoyer");
-    g_signal_connect(button, "clicked", G_CALLBACK(send_message), widgets);
-    gtk_grid_attach(GTK_GRID(grid), button, 2, 1, 1, 1);
-    
-    // CSS
-    const char *window_css = 
-    "window {"
-        "background-color: #36393f;"
-    "}"
-    "grid {"
-        "background-color: #36393f;"
-    "}"
-    "textview{"
-        "background-color: #2f3136;"
-        "color: #dcddde;"
-        "font-family: Arial;"
-        "font-size: 20px;"
-        "border-radius: 10px;"
-        "padding: 10px;"
-    "}"
-    "textview text {"
-        "background-color: #2f3136;"
-        "color: #dcddde;"
-        "font-family: Arial;"
-        "border-radius: 10px;"
-        "padding: 10px;"
-    "}"
-    "entry {"
-        "background-color: #40444b;"
-        "color: #dcddde;"
-        "font-family: Arial;"
-        "font-size: 14px;"
-        "padding: 10px;"
-        "border-radius: 5px;"
-        "border: none;"
-    "}"
-    "button {"
-        "font-family: Arial;"
-        "font-size: 14px;"
-        "padding: 0px;"
-        "border-radius: 5px;"
-        "border: none;"
-    "}"
-    "button > label {"
-        "padding: 15px 32px;"
-        "background-color: #5056a0;"
-        "color: #dcddde;"
-        "border-radius: 5px;"
-    "}"
-    "list {"
-        "background-color: #2c2f33;"
-        "color: #ffffff;"
-        "font-family: Arial;"
-        "font-size: 16px;"
-        "padding: 10px;"
-    "}"
-    "list row:selected {"
-        "background-color: #5056a0;"
-    "}";
-    
-    apply_css(window, window_css);
+    send_button = gtk_button_new_with_label("Envoyer");
+    g_signal_connect(send_button, "clicked", G_CALLBACK(send_message), widgets);
+    gtk_grid_attach(GTK_GRID(grid), send_button, 2, 1, 1, 1);
+    GtkStyleContext *context = gtk_widget_get_style_context(send_button);
+    gtk_style_context_add_class(context, "send_button");
+
+    apply_css_from_file("assets/style.css");
     
     g_signal_connect(entry, "activate", G_CALLBACK(send_message), widgets);
     
