@@ -19,6 +19,11 @@ file(GLOB SOURCES "src/*.c")
 # Créer l'exécutable
 add_executable(myDiscord ${SOURCES})
 
+
+set(CMAKE_C_COMPILER "C:/msys64/mingw64/bin/gcc.exe")
+set(CMAKE_CXX_COMPILER "C:/msys64/mingw64/bin/g++.exe")
+
+
 # Lier avec libpq
 target_link_libraries(myDiscord ${LIBPQ_LIBRARIES})
-target_link_libraries(myDiscord pq ssl crypto)
+
