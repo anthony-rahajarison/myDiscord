@@ -53,3 +53,17 @@ list {
 list row:selected {
     background-color: #5056a0;
 }
+
+.channel_select{
+    padding: 0px;
+    border-radius: 5px;
+}
+
+.channel_select > label{
+    padding: 15px 5px;
+    background-color: #787ca9;
+    font-family: Arial;
+    font-size: 15px;
+    color: #dcddde;
+    border-radius: 5px;
+}
