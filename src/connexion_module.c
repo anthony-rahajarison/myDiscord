@@ -3,7 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <libpq-fe.h>
-#include <openssl/sha.h>
+#include "connexion_module.h"
 
 #define DB_CONN "host=localhost dbname=mydiscord user=postgres password=yourpassword"
 
@@ -20,14 +20,14 @@ static PGconn* connect_db() {
 
 
 void hash_password(const char* password, char* hashed_output) {
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256((const unsigned char*)password, strlen(password), hash);
-
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        sprintf(hashed_output + (i * 2), "%02x", hash[i]);
+    unsigned int hash = 0;
+    for (size_t i = 0; i < strlen(password); i++) {
+        hash ^= password[i];
+        hash = (hash << 5) | (hash >> (32 - 5)); 
     }
-    hashed_output[64] = '\0';
+    sprintf(hashed_output, "%08x", hash);
 }
+
 
 
 int validate_password(const char *pwd) {

@@ -1,52 +1,79 @@
+// client.c
 #include <stdio.h>
 #include <stdlib.h>
-#include <winsock2.h>
-#include <windows.h>
+#include <string.h>
+#include <winsock2.h> 
 
+#define SERVER_IP "127.0.0.1"  //  (localhost)
+#define PORT 8080              // Port de connexion du serveur
+#define BUFFER_SIZE 1024       // Taille du buffer pour messages
 
-#pragma comment(lib, "ws2_32.lib")  
+// Initialise la bibliothèque WinSock
+extern void init_winsock();
 
-void connectToServer(const char *ip, int port) {
-    WSADATA wsa;
-    SOCKET sock;
-    struct sockaddr_in server;
-    char message[1024];
+// Crée un socket client
+extern SOCKET create_socket();
 
+// Connecte le socket au serveur
+void connect_to_server(SOCKET sock, struct sockaddr_in *server) {
+    server->sin_addr.s_addr = inet_addr(SERVER_IP); // Convertit IP string vers format binaire
+    server->sin_family = AF_INET;                    // Famille IPv4
+    server->sin_port = htons(PORT);                  // Port (conversion en Big Endian)
 
-    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-        printf("Erreur lors de l'initialisation de Winsock\n");
-        return;
-    }
-
-
-    sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock == INVALID_SOCKET) {
-        printf("Erreur de création de socket\n");
-        WSACleanup();
-        return;
-    }
-
-
-    server.sin_family = AF_INET;
-    server.sin_port = htons(port);  
-    server.sin_addr.s_addr = inet_addr(ip);  
-
-
-    if (connect(sock, (struct sockaddr *)&server, sizeof(server)) == SOCKET_ERROR) {
-        printf("La connexion au serveur a échoué\n");
+    if (connect(sock, (struct sockaddr *)server, sizeof(*server)) < 0) {
+        printf("Connexion échouée.\n");
         closesocket(sock);
         WSACleanup();
-        return;
+        exit(1);
     }
 
-
-    printf("Connecté au serveur. Entrez un message: ");
-    fgets(message, sizeof(message), stdin);
-
-
-    send(sock, message, strlen(message), 0);
-
-
-    closesocket(sock);
-    WSACleanup();
+    printf("🟢 Connecté au serveur !\n");
 }
+
+// Fonction principale de chat : envoyer/recevoir des messages
+void chat(SOCKET sock) {
+    char message[BUFFER_SIZE];   // Message à envoyer
+    char response[BUFFER_SIZE];  // Réponse du serveur
+    int recv_size;
+
+    while (1) {
+        printf("✉️  Message à envoyer (\"exit\" pour quitter) : ");
+        fgets(message, BUFFER_SIZE, stdin); // Lire message depuis l'utilisateur
+
+        // Retirer le retour à la ligne '\n'
+        message[strcspn(message, "\n")] = 0;
+
+        if (strcmp(message, "exit") == 0) break; // Quitter si "exit"
+
+        // Envoi du message au serveur
+        if (send(sock, message, strlen(message), 0) < 0) {
+            printf("Erreur lors de l'envoi du message.\n");
+            break;
+        }
+
+        // Réception de la réponse du serveur
+        recv_size = recv(sock, response, BUFFER_SIZE - 1, 0);
+        if (recv_size == SOCKET_ERROR) {
+            printf("Erreur de réception\n");
+            break;
+        }
+
+        response[recv_size] = '\0'; // Fin de chaîne
+        printf("📬 Réponse du serveur : %s\n", response);
+    }
+}
+
+// // Fonction main : initialisation + appel des fonctions de connexion/chat
+// int main() {
+// SOCKET sock;
+// struct sockaddr_in server;
+
+// init_winsock();              // Initialiser WinSock
+// sock = create_socket();      // Créer socket
+// connect_to_server(sock, &server); // Se connecter au serveur
+// chat(sock);                  // Lancer la session de chat
+
+// closesocket(sock);           // Fermer le socket
+// WSACleanup();                // Nettoyer WinSock
+// return 0;
+// }
