@@ -3,7 +3,7 @@
 #include <string.h>
 #include <winsock2.h>
 #include <libpq-fe.h>
-#include "server.h"
+
 
 #define SERVER_IP "127.0.0.1"
 #define PORT 8080
@@ -76,29 +76,39 @@ void send_past_messages(SOCKET client_sock, PGconn *conn, int channel_id) {
 }
 
 // Fonction pour gérer la discussion avec le client
-void handle_chat(SOCKET client_sock, PGconn *conn, int channel_id) {
-    // Envoyer les messages passés à partir de la base de données
-    send_past_messages(client_sock, conn, channel_id);
+    void handle_chat(SOCKET client_sock, PGconn *conn, int channel_id) {
+        send_past_messages(client_sock, conn, channel_id);
 
-    char message[BUFFER_SIZE];
-    int recv_size;
+        char message[BUFFER_SIZE];
+        int recv_size;
 
-    while (1) {
-        recv_size = recv(client_sock, message, BUFFER_SIZE, 0);
-        if (recv_size <= 0) {
-            break;
-        }
+        while (1) {
+            recv_size = recv(client_sock, message, BUFFER_SIZE - 1, 0);
+            if (recv_size <= 0) {
+                printf("Client déconnecté.\n");
+                break;
+            }
 
-        message[recv_size] = '\0'; // Ajout d'un caractère nul pour la chaîne de caractères
-        printf("Message reçu : %s\n", message);
+            message[recv_size] = '\0'; // Terminaison de la chaîne
 
-        // Sauvegarder le message dans la base de données
-        save_message_to_db(conn, channel_id, 1, message);  // 1 étant l'ID de l'expéditeur (pour l'exemple)
+            // Vérifie le type de message
+            if (strncmp(message, "CLIENT:", 7) == 0) {
+                char *clean_msg = message + 7;  
+                printf("[CLIENT] %s\n", clean_msg);
 
-        // Envoyer un accusé de réception au client
-        send(client_sock, "Message reçu et sauvegardé\n", 25, 0);
+                
+                save_message_to_db(conn, channel_id, 1, clean_msg);
+
+                // Réponse côté serveur
+                const char *response = "SERVER:Message reçu et sauvegardé\n";
+                send(client_sock, response, strlen(response), 0);
+            } else {
+                printf("[INCONNU] Message non reconnu : %s\n", message);
+                send(client_sock, "SERVER:Format inconnu\n", 23, 0);
+            }
     }
 }
+
 
 // Fonction qui démarre le serveur de chat
 void start_chat_server() {
@@ -119,7 +129,7 @@ void start_chat_server() {
     server.sin_addr.s_addr = INADDR_ANY;  // Écoute sur toutes les interfaces réseau
     server.sin_port = htons(PORT);        // Spécifie le port
 
-    // Appel de la fonction bind_server() au lieu du code de bind directement
+
     bind_server(sock, &server);
 
     if (listen(sock, 3) == SOCKET_ERROR) {
@@ -133,6 +143,7 @@ void start_chat_server() {
     printf("Serveur à l'écoute sur %s:%d...\n", SERVER_IP, PORT);
 
     while (1) {
+        // accepte les connexion entrantes
         SOCKET client_sock = accept(sock, (struct sockaddr *)&client, &client_size);
         if (client_sock == INVALID_SOCKET) {
             printf("Erreur d'acceptation de la connexion : %d\n", WSAGetLastError());
@@ -142,7 +153,7 @@ void start_chat_server() {
         printf("Nouvelle connexion depuis %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
 
         // Appel de la fonction handle_chat() pour gérer la discussion
-        handle_chat(client_sock, conn, 1); // 1 est l'ID du canal pour cet exemple
+        handle_chat(client_sock, conn, 1); 
 
         closesocket(client_sock);
     }

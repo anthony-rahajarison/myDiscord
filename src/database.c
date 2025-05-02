@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <libpq-fe.h>
-#include "db.h"
+
 
 extern void exitOnError(PGconn *conn);
 

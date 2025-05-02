@@ -1,165 +1,181 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libpq-fe.h>
 #include <winsock2.h>
-#include "server.h"
+#include <libpq-fe.h>
 
 #define PORT 8080
 #define MAX_CLIENTS 10
+#define BUFFER_SIZE 2048
+#define DB_CONN_STRING "user=postgres password=mdp dbname=myDiscord host=localhost"
 
+typedef struct {
+    SOCKET socket;
+    int authenticated;
+    int user_id;
+} Client;
 
-void handleClient(SOCKET client_sock, PGconn *conn);
-void run_server(PGconn *conn);
-void storeMessage(PGconn *conn, int channel_id, int sender_id, const char *content, int is_private, int encrypted);
-void exitOnError(PGconn *conn);
+/* Déclarations des fonctions */
+extern void init_winsock();
 
-void exitOnError(PGconn *conn) {
-    fprintf(stderr, "Erreur PostgreSQL : %s\n", PQerrorMessage(conn));
-    PQfinish(conn);
-    exit(1);
-}
 
 int main() {
-    WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        printf("Erreur lors de l'initialisation de Winsock\n");
-        exit(1);
-    }
-
-    // Connexion à la base de données PostgreSQL
-    PGconn *conn = PQconnectdb("user=postgres password=ton_mot_de_passe dbname=myDiscord host=localhost");
-    if (PQstatus(conn) != CONNECTION_OK) {
-        fprintf(stderr, "Impossible de se connecter à la base de données : %s", PQerrorMessage(conn));
-        PQfinish(conn);
-        WSACleanup();
-        exit(1);
-    }
-
-
-    run_server(conn);
-
-    // Exemple d'ajout de message (hors de la boucle de gestion des clients)
-    int channel_id = 1;     
-    int sender_id = 2;      // ID de l'utilisateur qui envoie le message
-    const char *content = "Hello, bienvenue sur MyDiscord!";  
-    int is_private = 0;     
-    int encrypted = 0;      
-
-    // Ajouter un message à la base de données
-    storeMessage(conn, channel_id, sender_id, content, is_private, encrypted);
-
-    // Fermer la connexion à la base de données après la fin du programme
-    PQfinish(conn);
-
-    WSACleanup();
-
-    return 0;
-}
-
-// Fonction pour gérer la discussion avec le client
-void handleClient(SOCKET client_sock, PGconn *conn) {
-    char buffer[1024];
-    int recv_size;
-
-    // Envoi d'un message d'accueil
-    send(client_sock, "Bienvenue sur MyDiscord!\n", 24, 0);
-
-    while (1) {
-        // Réception d'un message du client
-        recv_size = recv(client_sock, buffer, sizeof(buffer), 0);
-        if (recv_size <= 0) {
-            printf("Déconnexion du client.\n");
-            break;
-        }
-
-        buffer[recv_size] = '\0'; // Terminer la chaîne de caractères
-
-        // Affichage du message reçu
-        printf("Message reçu : %s\n", buffer);
-
-        // Exemple d'insertion du message dans la base de données
-        storeMessage(conn, 1, 2, buffer, 0, 0);  // 1 est l'ID du canal, 2 est l'ID de l'utilisateur
-
-        // Réponse au client
-        send(client_sock, "Message reçu et sauvegardé.\n", 27, 0);
-    }
-
-    closesocket(client_sock);
-}
-
-// Fonction pour démarrer le serveur
-void run_server(PGconn *conn) {
-    SOCKET server_socket, client_socket;
+    // WSADATA wsa;
+    SOCKET server_sock, client_sock;
     struct sockaddr_in server_addr, client_addr;
-    int client_len = sizeof(client_addr);
+    int client_addr_len = sizeof(client_addr);
+    PGconn *db_conn;
+    Client clients[MAX_CLIENTS] = {0};
+    int current_clients = 0;
+    fd_set readfds;
+    int max_sd, activity, i;
 
-        // Création du socket serveur
-        server_socket = socket(AF_INET, SOCK_STREAM, 0);
-        if (server_socket == INVALID_SOCKET) {
-            perror("Erreur lors de la création du socket");
-            exit(1);
-        }
+    /* Initialisation */
+    init_winsock();
+    server_sock = create_socket();
+    db_conn = connect_to_database();
 
-    // Configuration de l'adresse du serveur
+    /* Configuration du serveur */
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(PORT);
 
-    // Lier le socket à l'adresse
-    if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        perror("Erreur lors du binding");
-        exit(1);
+    if (bind(server_sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
+        perror("bind failed");
+        cleanup(server_sock, db_conn);
+        return 1;
     }
 
-    // Écouter les connexions
-    if (listen(server_socket, MAX_CLIENTS) < 0) {
-        perror("Erreur lors de l'écoute");
-        exit(1);
+    if (listen(server_sock, MAX_CLIENTS) == SOCKET_ERROR) {
+        perror("listen failed");
+        cleanup(server_sock, db_conn);
+        return 1;
     }
 
-    printf("Serveur en écoute sur le port %d...\n", PORT);
+    printf("Serveur démarré sur le port %d\n", PORT);
 
-    // Accepter et gérer les connexions entrantes
+    /* Boucle principale */
     while (1) {
-        client_socket = accept(server_socket, (struct sockaddr*)&client_addr, &client_len);
-        if (client_socket == INVALID_SOCKET){  
-            perror("Erreur lors de l'acceptation de la connexion");
+        FD_ZERO(&readfds);
+        FD_SET(server_sock, &readfds);
+        max_sd = server_sock;
+
+        /* Ajouter les sockets clients */
+        for (i = 0; i < current_clients; i++) {
+            if (clients[i].socket > 0) {
+                FD_SET(clients[i].socket, &readfds);
+            }
+            if (clients[i].socket > max_sd) {
+                max_sd = clients[i].socket;
+            }
+        }
+
+        /* Attendre une activité sur un socket */
+        activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
+        if (activity == SOCKET_ERROR) {
+            perror("select error");
             continue;
         }
 
-        printf("Un client est connecté.\n");
+        /* Nouvelle connexion */
+        if (FD_ISSET(server_sock, &readfds)) {
+            client_sock = accept(server_sock, (struct sockaddr*)&client_addr, &client_addr_len);
+            if (client_sock == INVALID_SOCKET) {
+                perror("accept failed");
+                continue;
+            }
 
-        // Gérer la communication avec le client
-        handleClient(client_socket, conn);
+            if (current_clients < MAX_CLIENTS) {
+                clients[current_clients].socket = client_sock;
+                clients[current_clients].authenticated = 0;
+                current_clients++;
+                printf("Nouveau client connecté (%d/%d)\n", current_clients, MAX_CLIENTS);
+                send(client_sock, "Bienvenue sur MyDiscord! Veuillez vous authentifier.\n", 52, 0);
+            } else {
+                send(client_sock, "Le serveur est complet. Réessayez plus tard.\n", 47, 0);
+                closesocket(client_sock);
+            }
+        }
+
+        /* Vérifier les clients existants */
+        for (i = 0; i < current_clients; i++) {
+            if (FD_ISSET(clients[i].socket, &readfds)) {
+                handle_client(clients[i].socket, db_conn);
+            }
+        }
     }
 
-    closesocket(server_socket);
+    cleanup(server_sock, db_conn);
+    return 0;
 }
 
-// Fonction pour enregistrer un message dans la base de données
-void storeMessage(PGconn *conn, int channel_id, int sender_id, const char *content, int is_private, int encrypted) {
-    char channel_id_str[12], sender_id_str[12], is_private_str[2], encrypted_str[2];
-    snprintf(channel_id_str, sizeof(channel_id_str), "%d", channel_id);
-    snprintf(sender_id_str, sizeof(sender_id_str), "%d", sender_id);
-    snprintf(is_private_str, sizeof(is_private_str), "%d", is_private);
-    snprintf(encrypted_str, sizeof(encrypted_str), "%d", encrypted);
+/* Implémentations des fonctions */
+void init_winsock() {
+    WSADATA wsa;
+    if (WSAStartup(MAKEWORD(2,2), &wsa) != 0) {
+        printf("WSAStartup failed: %d\n", WSAGetLastError());
+        exit(1);
+    }
+}
 
-    const char *params[5] = { 
-        channel_id_str, 
-        sender_id_str, 
-        content, 
-        is_private_str, 
-        encrypted_str
-    };
+SOCKET create_server_socket() {
+    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == INVALID_SOCKET) {
+        printf("Could not create socket: %d\n", WSAGetLastError());
+        WSACleanup();
+        exit(1);
+    }
+    return sock;
+}
 
-    PGresult *res = PQexecParams(conn, "INSERT INTO messages (channel_id, sender_id, content, is_private, encrypted) VALUES ($1, $2, $3, $4, $5)", 5, NULL, params, NULL, NULL, 0);
-    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-        printf("Erreur lors de l'enregistrement du message : %s\n", PQerrorMessage(conn));
-    } else {
-        printf("Message enregistré dans la base de données\n");
+PGconn* connect_to_database() {
+    PGconn *conn = PQconnectdb(DB_CONN_STRING);
+    if (PQstatus(conn) != CONNECTION_OK) {
+        fprintf(stderr, "Connection to database failed: %s\n", PQerrorMessage(conn));
+        PQfinish(conn);
+        WSACleanup();
+        exit(1);
+    }
+    return conn;
+}
+
+void handle_client(SOCKET client_sock, PGconn *db_conn) {
+    char buffer[BUFFER_SIZE];
+    int recv_size;
+
+    recv_size = recv(client_sock, buffer, BUFFER_SIZE, 0);
+    if (recv_size <= 0) {
+        printf("Client déconnecté\n");
+        closesocket(client_sock);
+        return;
     }
 
+    buffer[recv_size] = '\0';
+    printf("Message reçu: %s\n", buffer);
+
+    /* Traitement des commandes de base */
+    if (strncmp(buffer, "/quit", 5) == 0) {
+        send(client_sock, "Déconnexion...\n", 15, 0);
+        closesocket(client_sock);
+        return;
+    }
+
+    /* Exemple: Enregistrement du message en base */
+    const char *query = "INSERT INTO messages(content) VALUES($1)";
+    const char *params[1] = {buffer};
+    PGresult *res = PQexecParams(db_conn, query, 1, NULL, params, NULL, NULL, 0);
+
+    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+        fprintf(stderr, "Erreur DB: %s\n", PQerrorMessage(db_conn));
+    } else {
+        send(client_sock, "Message enregistré\n", 19, 0);
+    }
     PQclear(res);
+}
+
+void cleanup(SOCKET server_sock, PGconn *db_conn) {
+    closesocket(server_sock);
+    PQfinish(db_conn);
+    WSACleanup();
 }
