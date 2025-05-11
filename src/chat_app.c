@@ -1,6 +1,7 @@
 #include <gtk/gtk.h>
 #include <time.h>
 #include "chat_app.h"
+#include "authentification_window.h"
 
 void send_message(GtkWidget *widget, gpointer data) {
     ChatWidgets *widgets = (ChatWidgets *)data;
@@ -86,6 +87,15 @@ void create_channel(GtkWidget *button, gpointer user_data) {
     gtk_widget_show_all(dialog);
 }
 
+void return_to_login(GtkWidget *widget, gpointer user_data) {
+    AppData *app_data = (AppData *)user_data;
+
+    GtkWidget *window = gtk_widget_get_toplevel(widget);
+    gtk_widget_hide(window);
+
+    activate_auth(app_data->app, app_data);
+}
+
 void apply_css_from_file(const char *filepath) {
     GtkCssProvider *provider = gtk_css_provider_new();
     GError *error = NULL;
@@ -136,6 +146,10 @@ void activate(GtkApplication* app, gpointer user_data) {
     add_channel_btn = gtk_button_new_with_label("+ Ajouter un canal");
     g_signal_connect(add_channel_btn, "clicked", G_CALLBACK(create_channel), app_data);
     gtk_list_box_insert(GTK_LIST_BOX(channel_list), add_channel_btn, 0);
+
+    GtkWidget *logout_button = gtk_button_new_with_label("Déconnexion");
+    g_signal_connect(logout_button, "clicked", G_CALLBACK(return_to_login), app_data);
+    gtk_grid_attach(GTK_GRID(grid), logout_button, 0, 2, 1, 1);
     
     // Right Chat Section
     scrolled_window = gtk_scrolled_window_new(NULL, NULL);
@@ -155,6 +169,7 @@ void activate(GtkApplication* app, gpointer user_data) {
     // Add default channel
     add_channel(channel_list, "Canal Général", &app_data->chat);
     
+    //Send message
     entry = gtk_entry_new();
     gtk_widget_set_hexpand(entry, TRUE);
     gtk_grid_attach(GTK_GRID(grid), entry, 1, 1, 1, 1);
@@ -163,8 +178,9 @@ void activate(GtkApplication* app, gpointer user_data) {
     send_button = gtk_button_new_with_label("Envoyer");
     g_signal_connect(send_button, "clicked", G_CALLBACK(send_message), &app_data->chat);
     gtk_grid_attach(GTK_GRID(grid), send_button, 2, 1, 1, 1);
-    
-    apply_css_from_file("./../assets/style.css");
-    g_signal_connect(entry, "activate", G_CALLBACK(send_message), &app_data->chat);
+    GtkStyleContext *context = gtk_widget_get_style_context(send_button);
+    gtk_style_context_add_class(context, "send_button");
+
+    apply_css_from_file("./assets/style.css");
     gtk_widget_show_all(window);
 }

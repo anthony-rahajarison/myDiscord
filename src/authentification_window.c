@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "chat_app.h"
+#include "authentification_window.h"
 
 static void show_main_app(GtkWidget *widget, gpointer data) {
     AppData *app_data = (AppData *)data;
@@ -52,14 +53,14 @@ static void switch_to_login(GtkWidget *widget, gpointer data) {
     gtk_stack_set_visible_child_name(GTK_STACK(widgets->stack), "login");
 }
 
-static void activate_auth(GtkApplication *app, gpointer user_data) {
+void activate_auth(GtkApplication *app, gpointer user_data) {
     AppData *app_data = (AppData *)user_data;
     AuthWidgets *widgets = &app_data->auth;
  
     //Main Window
     widgets->main_window = gtk_application_window_new(app);
     gtk_window_set_title(GTK_WINDOW(widgets->main_window), "Authentification");
-    gtk_window_set_default_size(GTK_WINDOW(widgets->main_window), 400, 300);
+    gtk_window_set_default_size(GTK_WINDOW(widgets->main_window), 600, 400);
     gtk_container_set_border_width(GTK_CONTAINER(widgets->main_window), 10);
 
     //New Stack to switch between login/register
@@ -68,10 +69,17 @@ static void activate_auth(GtkApplication *app, gpointer user_data) {
     gtk_container_add(GTK_CONTAINER(widgets->main_window), widgets->stack);
 
     //Connexion Page
+    GtkWidget *login_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    gtk_widget_set_halign(login_box, GTK_ALIGN_CENTER);
+    gtk_widget_set_valign(login_box, GTK_ALIGN_CENTER);
+    gtk_container_set_border_width(GTK_CONTAINER(login_box), 10);
+
+    //Login Grid setup
     GtkWidget *login_grid = gtk_grid_new();
     gtk_grid_set_row_spacing(GTK_GRID(login_grid), 5);
     gtk_grid_set_column_spacing(GTK_GRID(login_grid), 5);
-    gtk_container_set_border_width(GTK_CONTAINER(login_grid), 10);
+
+    gtk_box_pack_start(GTK_BOX(login_box), login_grid, FALSE, FALSE, 0);
 
     widgets->login_username = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(widgets->login_username), "Nom d'utilisateur");
@@ -88,12 +96,18 @@ static void activate_auth(GtkApplication *app, gpointer user_data) {
     GtkWidget *register_link = gtk_button_new_with_label("Créer un compte");
     g_signal_connect(register_link, "clicked", G_CALLBACK(switch_to_register), widgets);
     gtk_grid_attach(GTK_GRID(login_grid), register_link, 0, 3, 1, 1);
+    gtk_widget_set_name(register_link, "register_link");
 
     //Register Page
+    GtkWidget *register_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    gtk_widget_set_halign(register_box, GTK_ALIGN_CENTER);
+    gtk_widget_set_valign(register_box, GTK_ALIGN_CENTER);
+    gtk_container_set_border_width(GTK_CONTAINER(register_box), 10);
+
     GtkWidget *register_grid = gtk_grid_new();
     gtk_grid_set_row_spacing(GTK_GRID(register_grid), 5);
     gtk_grid_set_column_spacing(GTK_GRID(register_grid), 5);
-    gtk_container_set_border_width(GTK_CONTAINER(register_grid), 10);
+    gtk_box_pack_start(GTK_BOX(register_box), register_grid, FALSE, FALSE, 0);
     
     widgets->register_username = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(widgets->register_username), "Nom d'utilisateur");
@@ -114,12 +128,14 @@ static void activate_auth(GtkApplication *app, gpointer user_data) {
     GtkWidget *login_link = gtk_button_new_with_label("Déjà un compte? Se connecter");
     g_signal_connect(login_link, "clicked", G_CALLBACK(switch_to_login), widgets);
     gtk_grid_attach(GTK_GRID(register_grid), login_link, 0, 4, 1, 1);
+    gtk_widget_set_name(login_link, "login_link");
 
     //Adding grids to stacks
-    gtk_stack_add_named(GTK_STACK(widgets->stack), login_grid, "login");
-    gtk_stack_add_named(GTK_STACK(widgets->stack), register_grid, "register");
+    gtk_stack_add_named(GTK_STACK(widgets->stack), login_box, "login");
+    gtk_stack_add_named(GTK_STACK(widgets->stack), register_box, "register");
     
     gtk_widget_show_all(widgets->main_window);
+    apply_css_from_file("./assets/auth.css");
 }
 
 int main(int argc, char **argv) {

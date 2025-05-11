@@ -4,6 +4,7 @@ window {
 grid {
     background-color: #36393f;
 }
+
 textview{
     background-color: #2f3136;
     color: #dcddde;
@@ -19,6 +20,8 @@ textview text {
     border-radius: 10px;
     padding: 10px;
 }
+
+
 entry {
     background-color: #40444b;
     color: #dcddde;
@@ -34,13 +37,12 @@ entry {
     font-size: 14px;
     padding: 0px;
     border-radius: 5px;
-    border: none;
-}
-.send_button > label {
-    padding: 15px 32px;
+    background-image: none;
     background-color: #5056a0;
     color: #dcddde;
     border-radius: 5px;
+    padding: 15px 32px;
+    border: none;
 }
 
 list {
@@ -50,13 +52,11 @@ list {
     font-size: 16px;
     padding: 10px;
 }
-list row:selected {
-    background-color: #5056a0;
-}
 
 .channel_select{
     padding: 0px;
     border-radius: 5px;
+    background-color: #787ca9;
 }
 
 .channel_select > label{
