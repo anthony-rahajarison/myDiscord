@@ -3,14 +3,12 @@
 #include <libpq-fe.h>
 
 
-extern void exitOnError(PGconn *conn);
-
 void createDatabase(PGconn *conn) {
     PGresult *res = PQexec(conn, "CREATE DATABASE myDiscord");
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         fprintf(stderr, "Erreur lors de la création de la base : %s\n", PQerrorMessage(conn));
         PQclear(res);
-        exitOnError(conn);
+        
     }
     PQclear(res);
 }
@@ -26,7 +24,7 @@ void createRolesTable(PGconn *conn) {
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         fprintf(stderr, "Erreur table roles : %s\n", PQerrorMessage(conn));
         PQclear(res);
-        exitOnError(conn);
+        
     }
 
     PQclear(res);
@@ -48,7 +46,7 @@ void createUserTable(PGconn *conn) {
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         fprintf(stderr, "Erreur table users : %s\n", PQerrorMessage(conn));
         PQclear(res);
-        exitOnError(conn);
+        
     }
 
     PQclear(res);
@@ -68,7 +66,7 @@ void createChannelsTable(PGconn *conn) {
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         fprintf(stderr, "Erreur table channels : %s\n", PQerrorMessage(conn));
         PQclear(res);
-        exitOnError(conn);
+        
     }
 
     PQclear(res);
@@ -87,7 +85,7 @@ void createChannelMembersTable(PGconn *conn) {
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         fprintf(stderr, "Erreur table channel_members : %s\n", PQerrorMessage(conn));
         PQclear(res);
-        exitOnError(conn);
+        
     }
 
     PQclear(res);
@@ -110,7 +108,7 @@ void createMessagesTable(PGconn *conn) {
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         fprintf(stderr, "Erreur table messages : %s\n", PQerrorMessage(conn));
         PQclear(res);
-        exitOnError(conn);
+        
     }
     PQclear(res);
     printf("✅ Table `messages` créée avec succès !\n");
@@ -130,7 +128,7 @@ void createReactionsTable(PGconn *conn) {
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         fprintf(stderr, "Erreur table reactions : %s\n", PQerrorMessage(conn));
         PQclear(res);
-        exitOnError(conn);
+        
     }
 
     PQclear(res);
@@ -152,7 +150,7 @@ void createPrivateMessagesTable(PGconn *conn) {
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         fprintf(stderr, "Erreur table private_messages : %s\n", PQerrorMessage(conn));
         PQclear(res);
-        exitOnError(conn);
+        
     }
 
     PQclear(res);

@@ -3,10 +3,14 @@
 #include <string.h>
 #include <winsock2.h>
 #include <libpq-fe.h>
+#include "client.h"
+#include "command.h"
+#include "connexion_module.h"
+#include "database.h"
+#include "server.h"
 
 #define PORT 8080
 #define MAX_CLIENTS 10
-#define BUFFER_SIZE 2048
 #define DB_CONN_STRING "user=postgres password=mdp dbname=myDiscord host=localhost"
 
 typedef struct {
@@ -15,9 +19,45 @@ typedef struct {
     int user_id;
 } Client;
 
-/* Déclarations des fonctions */
-extern void init_winsock();
+void cleanup(SOCKET server_sock, PGconn *db_conn) {
+    closesocket(server_sock);
+    PQfinish(db_conn);
+    WSACleanup();
+}
 
+void handle_client(SOCKET client_sock, PGconn *db_conn) {
+    char buffer[BUFFER_SIZE];
+    int recv_size;
+
+    recv_size = recv(client_sock, buffer, BUFFER_SIZE, 0);
+    if (recv_size <= 0) {
+        printf("Client déconnecté\n");
+        closesocket(client_sock);
+        return;
+    }
+
+    buffer[recv_size] = '\0';
+    printf("Message reçu: %s\n", buffer);
+
+    /* Traitement des commandes de base */
+    if (strncmp(buffer, "/quit", 5) == 0) {
+        send(client_sock, "Déconnexion...\n", 15, 0);
+        closesocket(client_sock);
+        return;
+    }
+
+    /* Exemple: Enregistrement du message en base */
+    const char *query = "INSERT INTO messages(content) VALUES($1)";
+    const char *params[1] = {buffer};
+    PGresult *res = PQexecParams(db_conn, query, 1, NULL, params, NULL, NULL, 0);
+
+    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+        fprintf(stderr, "Erreur DB: %s\n", PQerrorMessage(db_conn));
+    } else {
+        send(client_sock, "Message enregistré\n", 19, 0);
+    }
+    PQclear(res);
+}
 
 int main() {
     // WSADATA wsa;
@@ -33,7 +73,7 @@ int main() {
     /* Initialisation */
     init_winsock();
     server_sock = create_socket();
-    db_conn = connect_to_database();
+    db_conn = connect_db();
 
     /* Configuration du serveur */
     memset(&server_addr, 0, sizeof(server_addr));
@@ -110,15 +150,6 @@ int main() {
     return 0;
 }
 
-/* Implémentations des fonctions */
-void init_winsock() {
-    WSADATA wsa;
-    if (WSAStartup(MAKEWORD(2,2), &wsa) != 0) {
-        printf("WSAStartup failed: %d\n", WSAGetLastError());
-        exit(1);
-    }
-}
-
 SOCKET create_server_socket() {
     SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock == INVALID_SOCKET) {
@@ -138,44 +169,4 @@ PGconn* connect_to_database() {
         exit(1);
     }
     return conn;
-}
-
-void handle_client(SOCKET client_sock, PGconn *db_conn) {
-    char buffer[BUFFER_SIZE];
-    int recv_size;
-
-    recv_size = recv(client_sock, buffer, BUFFER_SIZE, 0);
-    if (recv_size <= 0) {
-        printf("Client déconnecté\n");
-        closesocket(client_sock);
-        return;
-    }
-
-    buffer[recv_size] = '\0';
-    printf("Message reçu: %s\n", buffer);
-
-    /* Traitement des commandes de base */
-    if (strncmp(buffer, "/quit", 5) == 0) {
-        send(client_sock, "Déconnexion...\n", 15, 0);
-        closesocket(client_sock);
-        return;
-    }
-
-    /* Exemple: Enregistrement du message en base */
-    const char *query = "INSERT INTO messages(content) VALUES($1)";
-    const char *params[1] = {buffer};
-    PGresult *res = PQexecParams(db_conn, query, 1, NULL, params, NULL, NULL, 0);
-
-    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-        fprintf(stderr, "Erreur DB: %s\n", PQerrorMessage(db_conn));
-    } else {
-        send(client_sock, "Message enregistré\n", 19, 0);
-    }
-    PQclear(res);
-}
-
-void cleanup(SOCKET server_sock, PGconn *db_conn) {
-    closesocket(server_sock);
-    PQfinish(db_conn);
-    WSACleanup();
 }

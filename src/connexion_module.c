@@ -8,7 +8,7 @@
 #define DB_CONN "host=localhost dbname=mydiscord user=postgres password=yourpassword"
 
 
-static PGconn* connect_db() {
+PGconn* connect_db() {
     PGconn* conn = PQconnectdb(DB_CONN);
     if (PQstatus(conn) != CONNECTION_OK) {
         fprintf(stderr, "Connection failed: %s\n", PQerrorMessage(conn));

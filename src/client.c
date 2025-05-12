@@ -46,7 +46,6 @@ void chat(SOCKET sock) {
         
         if (strcmp(message, "exit") == 0) break;
 
-        // Solution ultime - garantie sans warning
         int written = snprintf(wrapped_msg, BUFFER_SIZE, PREFIX "%s", message);
         if (written < 0 || written >= BUFFER_SIZE) {
             printf("Erreur: problème de formatage du message\n");

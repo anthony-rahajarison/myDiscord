@@ -3,13 +3,7 @@
 
 #include <stdio.h>
 #include <string.h>
-
-
-typedef enum {
-    ROLE_MEMBER,     
-    ROLE_MODERATOR,  
-    ROLE_ADMIN       
-} Role;
+#include "user.h"
 
 
 typedef struct {
@@ -20,9 +14,6 @@ typedef struct {
 
 /* Traite une commande reçue d'un utilisateur */
 void handle_command(User *user, const char *message);
-
-/* Crée un nouveau salon */
-void create_channel(const char *name);
 
 /* Bannit un utilisateur */
 void ban_user(const char *username);
